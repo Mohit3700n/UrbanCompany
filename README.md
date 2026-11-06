@@ -5,6 +5,120 @@ local service professionals, compare database-backed details, check availability
 and request a booking. Vendors manage their profiles and service requests, while
 admins review vendor applications.
 
+## Project flow graphs
+
+These diagrams provide a visual map from the browser screens to the API,
+database, and the main customer/vendor workflows. GitHub renders the Mermaid
+diagrams below directly.
+
+### System architecture
+
+```mermaid
+flowchart LR
+    Person["Customer / Vendor / Admin"] --> Browser["React app<br/>frontend/src/pages"]
+    Browser --> Router["React Router<br/>frontend/src/App.jsx"]
+    Router --> Auth["AuthProvider + ProtectedRoute<br/>JWT in localStorage"]
+    Router --> Pages["Role-specific pages<br/>Dashboard / Vendor / Admin"]
+    Pages --> Client["Axios client<br/>frontend/src/api/axios.js"]
+    Client -->|"/api/v1 via Vite proxy"| API["FastAPI app<br/>app/main.py"]
+
+    API --> AuthRoutes["Auth routes"]
+    API --> MarketRoutes["Catalog / Vendor / Admin routes"]
+    API --> AIAgent["AI intent + vendor search<br/>app/routes/ai.py"]
+    API --> BookingRoutes["Booking / Availability / Review routes"]
+    API --> Requests["Service request routes"]
+
+    AuthRoutes --> Security["JWT + role checks<br/>app/security.py"]
+    MarketRoutes --> ORM["SQLAlchemy models<br/>app/models"]
+    BookingRoutes --> ORM
+    Requests --> ORM
+    AIAgent --> AIIntent["Intent extraction<br/>Ollama → Groq fallback"]
+    AIIntent --> AIAgent
+    AIAgent --> ORM
+    ORM --> Database[("PostgreSQL + PostGIS<br/>Docker Compose")]
+
+    API -. "startup: enable PostGIS,<br/>create local tables" .-> Database
+    Seed["scripts/seed.py<br/>categories + dev admin"] --> Database
+```
+
+### Customer search-to-booking flow
+
+```mermaid
+flowchart TD
+    Start["Customer opens app"] --> Login["Register / Login"]
+    Login --> Token["API returns JWT<br/>AuthProvider stores token"]
+    Token --> Dashboard["Customer dashboard"]
+    Dashboard --> Describe["Describe service need"]
+    Describe --> Interpret["POST /api/v1/ai/find-vendors"]
+    Interpret --> Extract["Ollama extracts intent<br/>Groq fallback"]
+    Extract --> Clear{"Service clear<br/>and supported?"}
+    Clear -->|No| Ask["Ask clarification / show supported categories"]
+    Ask --> Describe
+    Clear -->|Yes| Match["Match active service category"]
+    Match --> Search["Query approved, active vendors<br/>accepting requests"]
+    Search --> Geo["PostGIS distance around Palghar"]
+    Geo --> Facts["Add DB facts: reviews,<br/>completed work, match reasons"]
+    Facts --> Results["Show vendor results"]
+    Results --> Compare["Sort by distance, ratings,<br/>experience, or best match"]
+    Results --> Date{"Customer chooses<br/>a date?"}
+    Date -->|Yes| Availability["POST /api/v1/availability/slots/batch"]
+    Availability --> SlotFacts["Working hours + blocked dates<br/>+ active bookings → open slots"]
+    SlotFacts --> Results
+    Date -->|No| Choose["Choose a vendor"]
+    Compare --> Choose
+    Choose --> Booking["Booking page pre-fills search details"]
+    Booking --> Recheck["GET /api/v1/availability/slots<br/>re-check current slots"]
+    Recheck --> Confirm["Customer selects slot<br/>and confirms request"]
+    Confirm --> Create["POST /api/v1/bookings"]
+    Create --> Pending["Booking status: pending"]
+    Pending --> VendorDecision{"Vendor decision"}
+    VendorDecision -->|Reject| Rejected["rejected"]
+    VendorDecision -->|Accept| Accepted["accepted"]
+    Accepted --> Arrival["Arrival OTP verified"]
+    Arrival --> Progress["in_progress"]
+    Progress --> Completion["Completion OTP verified"]
+    Completion --> Done["completed"]
+    Done --> Review["Customer may submit a review"]
+    Pending --> Track["Customer tracks status<br/>and next steps in dashboard"]
+    Accepted --> Track
+    Rejected --> Track
+    Progress --> Track
+    Done --> Track
+```
+
+### Vendor onboarding and admin approval
+
+```mermaid
+flowchart LR
+    Vendor["Vendor registers"] --> Onboard["Vendor onboarding page"]
+    Onboard --> Profile["POST /api/v1/vendors/profile<br/>business + categories + location"]
+    Profile --> Pending["Profile status: pending<br/>not publicly searchable"]
+    Pending --> Admin["Admin dashboard"]
+    Admin --> Review{"Review vendor"}
+    Review -->|Reject| Declined["Profile rejected"]
+    Review -->|Approve| Active["Approved / active vendor"]
+    Active --> Searchable["Eligible for matching<br/>when accepting requests"]
+    Active --> Hours["Configure weekly working hours<br/>and unavailable dates"]
+    Active --> Requests["Vendor dashboard<br/>view booking requests"]
+    Requests --> Decision{"Accept or reject booking"}
+    Decision -->|Accept| Accepted["Booking accepted"]
+    Decision -->|Reject| Rejected["Booking rejected"]
+    Accepted --> Verify["Arrival and completion<br/>OTP workflow"]
+```
+
+### Where to look in the code
+
+| Area | Main files | Responsibility |
+|---|---|---|
+| App startup and API wiring | `app/main.py` | Creates the FastAPI app, initializes local database tables, and mounts routers under `/api/v1`. |
+| Frontend routes and access control | `frontend/src/App.jsx`, `frontend/src/components/ProtectedRoute.jsx` | Maps URLs to pages and limits pages by role. |
+| Login session | `frontend/src/context/AuthProvider.jsx`, `app/api/routes/auth.py`, `app/security.py` | Login/register, JWT storage, current-user lookup, and role checks. |
+| Customer agent and results | `frontend/src/pages/Dashboard.jsx`, `app/routes/ai.py` | Service search, comparison, Palghar matching, and customer booking/status UI. |
+| Vendor onboarding and operations | `frontend/src/pages/VendorOnboarding.jsx`, `frontend/src/pages/VendorDashboard.jsx`, `app/api/routes/vendors.py`, `app/api/routes/admin.py` | Profile creation, approval, and handling vendor requests. |
+| Availability and bookings | `frontend/src/pages/BookingPage.jsx`, `app/api/routes/availability.py`, `app/api/routes/bookings.py` | Real slot calculation, booking creation, status changes, and OTP verification. |
+| Database definitions | `app/models/`, `app/schemas/`, `app/db.py` | SQLAlchemy tables, API validation/response shapes, and database sessions. |
+| Local infrastructure and tests | `docker-compose.yml`, `scripts/seed.py`, `tests/` | PostGIS database, development seed data, and backend test cases. |
+
 ## How the project works
 
 ### Architecture
