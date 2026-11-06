@@ -13,6 +13,7 @@ from app.models.availability import (
     VendorUnavailableDate,
 )
 from app.schemas.availability import (
+    BatchAvailabilityInput,
     WorkingHoursBulkInput,
     UnavailableDateInput,
 )
@@ -278,6 +279,8 @@ def get_available_slots(
         return {
             "success": True,
             "status": "unavailable",
+            "vendor_id": vendor.id,
+            "business_name": vendor.business_name,
             "message": "Vendor is unavailable on this date",
             "requested_date": requested_date.isoformat(),
             "slots": [],
@@ -296,6 +299,8 @@ def get_available_slots(
         return {
             "success": True,
             "status": "closed",
+            "vendor_id": vendor.id,
+            "business_name": vendor.business_name,
             "message": "Vendor does not work on this day",
             "requested_date": requested_date.isoformat(),
             "slots": [],
@@ -369,4 +374,44 @@ def get_available_slots(
         "slots": slots,
     }
 
-    
+
+@router.post("/slots/batch")
+def get_batch_available_slots(
+    payload: BatchAvailabilityInput,
+    db: Session = Depends(get_db),
+):
+    if len(payload.vendor_ids) != len(set(payload.vendor_ids)):
+        raise HTTPException(
+            status_code=400,
+            detail="Duplicate vendor IDs are not allowed",
+        )
+
+    vendors = []
+    for vendor_id in payload.vendor_ids:
+        try:
+            availability = get_available_slots(
+                vendor_id=vendor_id,
+                requested_date=payload.requested_date,
+                duration_minutes=payload.duration_minutes,
+                slot_interval_minutes=payload.slot_interval_minutes,
+                db=db,
+            )
+        except HTTPException as exc:
+            if exc.status_code not in (400, 404):
+                raise
+            availability = {
+                "success": False,
+                "status": "error",
+                "vendor_id": vendor_id,
+                "message": exc.detail,
+                "requested_date": payload.requested_date.isoformat(),
+                "slots": [],
+            }
+        vendors.append(availability)
+
+    return {
+        "success": True,
+        "requested_date": payload.requested_date.isoformat(),
+        "duration_minutes": payload.duration_minutes,
+        "vendors": vendors,
+    }

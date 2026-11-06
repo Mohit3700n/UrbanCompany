@@ -10,8 +10,8 @@ class Vendor(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    accepting_requests: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    accepting_requests: Mapped[bool] = mapped_column(Boolean, default=False)
 
 class VendorService(Base):
     __tablename__ = "vendor_services"

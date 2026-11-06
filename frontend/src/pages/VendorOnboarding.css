@@ -1,0 +1,273 @@
+
+.vo-page {
+  min-height: 100vh;
+  background: #f6f9f6;
+  padding: 35px 20px 60px;
+  color: #19372a;
+}
+
+.vo-container {
+  width: 100%;
+  max-width: 780px;
+  margin: auto;
+}
+
+.vo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 55px;
+}
+
+.vo-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.vo-logo span {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  background: #174b35;
+  color: #d6ff91;
+  border-radius: 10px;
+}
+
+.vo-step,
+.vo-eyebrow {
+  color: #72905a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.vo-heading {
+  margin-bottom: 30px;
+}
+
+.vo-heading h1 {
+  margin: 12px 0;
+  font-size: clamp(27px, 5vw, 37px);
+  letter-spacing: -1.2px;
+}
+
+.vo-heading p,
+.vo-section-description {
+  color: #7c8c81;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.vo-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.vo-section {
+  padding: 28px;
+  background: white;
+  border: 1px solid #e4ebe5;
+  border-radius: 15px;
+}
+
+.vo-section h2 {
+  margin-bottom: 7px;
+  font-size: 19px;
+  color: #254734;
+}
+
+.vo-section-description {
+  margin-bottom: 23px;
+  font-size: 13px;
+}
+
+.vo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.vo-field label {
+  color: #405849;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.vo-field input,
+.vo-field textarea {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #dce6de;
+  border-radius: 8px;
+  outline: none;
+  background: #fbfcfb;
+  color: #19372a;
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.vo-field input:focus,
+.vo-field textarea:focus {
+  border-color: #6d9a61;
+  box-shadow: 0 0 0 3px rgba(109, 154, 97, 0.12);
+}
+
+.vo-category-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.vo-category {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid #e2eae3;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.vo-category.selected {
+  background: #f0f8ed;
+  border-color: #80a76b;
+}
+
+.vo-category input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vo-category-check {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid #bdcbbf;
+  border-radius: 5px;
+  color: white;
+  font-size: 12px;
+}
+
+.vo-category.selected .vo-category-check {
+  background: #287447;
+  border-color: #287447;
+}
+
+.vo-category-name {
+  color: #385443;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.vo-selected-count {
+  margin-top: 16px;
+  color: #56804c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.vo-location-btn {
+  margin-top: 20px;
+  padding: 12px 17px;
+  border: 1px solid #c8ddc7;
+  border-radius: 8px;
+  background: #f1f8ef;
+  color: #28643b;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.vo-location-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.vo-coordinate-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.vo-location-note {
+  margin-top: 14px;
+  color: #849188;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.vo-muted {
+  color: #859188;
+  font-size: 13px;
+}
+
+.vo-error {
+  padding: 13px 15px;
+  border: 1px solid #f1d0cd;
+  border-radius: 8px;
+  background: #fff1ef;
+  color: #b73d35;
+  font-size: 13px;
+}
+
+.vo-submit {
+  width: 100%;
+  padding: 16px;
+  border: 0;
+  border-radius: 9px;
+  background: #b8e86b;
+  color: #19372a;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.vo-submit:hover:not(:disabled) {
+  background: #a7dc54;
+}
+
+.vo-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.vo-disclaimer {
+  text-align: center;
+  color: #87938a;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .vo-page {
+    padding: 22px 14px 40px;
+  }
+
+  .vo-header {
+    margin-bottom: 35px;
+  }
+
+  .vo-section {
+    padding: 21px 17px;
+  }
+
+  .vo-category-grid,
+  .vo-coordinate-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vo-step {
+    font-size: 9px;
+  }
+}

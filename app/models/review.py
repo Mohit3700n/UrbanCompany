@@ -19,7 +19,6 @@ class Review(Base):
 
     booking_id: Mapped[int] = mapped_column(
         ForeignKey("bookings.id", ondelete="CASCADE"),
-        unique=True,
         index=True
     )
 

@@ -1,130 +1,213 @@
-# DailyDrill Phase 1 — Marketplace Foundation
+# DailyDrill
 
-This is the first backend milestone: authentication, service catalogue, vendor onboarding,
-admin approval and PostGIS-based nearby vendor search. The AI agent, booking engine,
-payments and B2B RFQ workflows are intentionally not included yet.
+DailyDrill is a Palghar-focused home-services marketplace. Customers can find
+local service professionals, compare database-backed details, check availability,
+and request a booking. Vendors manage their profiles and service requests, while
+admins review vendor applications.
+
+## How the project works
+
+### Architecture
+
+- **Frontend:** React 19 and Vite (`frontend/`). React Router handles customer,
+  vendor, and admin pages. Axios sends API requests to `/api/v1`.
+- **API:** FastAPI (`app/`) provides authentication and marketplace endpoints.
+  The API uses SQLAlchemy models and Pydantic request/response schemas.
+- **Database:** PostgreSQL with PostGIS, run locally with Docker Compose. Vendor
+  locations are used for geographic distance searches.
+- **AI request understanding:** `app/routes/ai.py` asks Ollama to extract the
+  requested service and problem details. If Ollama is unavailable, it tries
+  Groq. The model interprets the request; vendor facts and matches are queried
+  from the database.
+
+### Customer search and booking flow
+
+1. A customer registers or logs in. The API returns a bearer token; the frontend
+   stores it in local storage and sends it with authenticated requests.
+2. The customer describes the requested service in the dashboard.
+   `POST /api/v1/ai/find-vendors` converts the message into a service intent.
+   If the service is unclear or unsupported, the API asks for clarification or
+   returns the active service categories.
+3. The API matches the service to an active category in PostgreSQL. Vendor
+   results are restricted to approved, active vendors accepting requests and
+   matching that category. The agent's default search center is Palghar; PostGIS
+   calculates distance from stored vendor coordinates.
+4. Results include facts read from the database, such as distance, customer
+   reviews, completed bookings, and match reasons. The dashboard can sort the
+   results by distance, reviews, or completed work. These are comparisons, not
+   guarantees of service quality.
+5. If the customer chooses a date, the dashboard requests availability for the
+   listed vendors. Availability is computed from each vendor's working hours,
+   blocked dates, existing bookings, and future time slots. It can change before
+   a booking is submitted.
+6. The customer selects a vendor and continues to booking. The booking page
+   fetches the vendor's current slots again, pre-fills still-valid search
+   details, and requires the customer to confirm the request.
+7. A new booking starts as **pending**. The vendor can accept or reject it.
+   Accepted bookings can move to in-progress and completed; arrival and
+   completion OTPs verify those transitions. Customers can track the status,
+   cancel eligible requests, and review completed work.
+
+### Vendor and admin flow
+
+1. A user registers with the vendor role and submits a profile, offered
+   categories, and location.
+2. New vendor profiles start pending and are not available in public search.
+3. An admin reviews pending profiles and approves or rejects them. Approved,
+   active vendors can manage their availability and booking requests from the
+   vendor dashboard.
+4. Vendors configure weekly working hours and unavailable dates, accept or
+   reject booking requests, and use OTP verification as a service progresses.
 
 ## Requirements
-- Python 3.11+
-- Docker Desktop
-- Git (recommended)
 
-## 1. Configure
-```bash
-# Windows PowerShell
+- Windows PowerShell (commands below use Windows paths and syntax)
+- Python 3.11 or newer
+- Node.js and npm
+- Docker Desktop
+- Ollama for local AI intent extraction, or a Groq API key as fallback
+
+## Local setup
+
+Run commands from the project root unless a command changes directory.
+
+### 1. Configure Python and environment
+
+```powershell
 py -3.11 -m venv .venv
 .venv\Scripts\Activate.ps1
-
-# macOS/Linux
-python3 -m venv .venv
-source .venv/bin/activate
-
-pip install -r requirements.txt
-copy .env.example .env   # Windows
-# cp .env.example .env   # macOS/Linux
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env
 ```
 
-Edit `.env`. Replace `JWT_SECRET` with a long random secret.
+Edit `.env` and set a long, unique `JWT_SECRET`. Keep `.env` local; it is
+intentionally ignored by Git. Add a `GEOAPIFY_API_KEY` if using the location
+geocoding endpoint.
 
-## 2. Start database
-```bash
+The AI provider reads `GROQ_API_KEY`, `OLLAMA_BASE_URL`, and `OLLAMA_MODEL` from
+the API process environment. Ollama defaults to `http://localhost:11434` and
+model `llama3.2:3b`; install Ollama and make that model available to use the
+local provider. Groq is tried when Ollama is unavailable. Set `GROQ_API_KEY` in
+the PowerShell session before starting the API if using the fallback:
+
+```powershell
+$env:GROQ_API_KEY = "your-groq-api-key"
+```
+
+Do not commit real API keys or secrets.
+
+### 2. Start PostgreSQL/PostGIS
+
+```powershell
 docker compose up -d
+docker compose ps
 ```
 
-Wait until the PostGIS container is healthy.
+Wait until the `db` service is healthy. The current compose file uses a
+development-only database and password; change them before using a shared or
+production environment.
 
-## 3. Start API
-```bash
-uvicorn app.main:app --reload
+### 3. Start the API and initialize database tables
+
+The API startup creates the PostGIS extension and SQLAlchemy tables for local
+development. Start it now and leave this terminal running:
+
+```powershell
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Open http://127.0.0.1:8000/docs and http://127.0.0.1:8000/health.
+Wait for the API startup to finish before proceeding.
 
-## 4. Seed categories and local admin
-In another terminal, activate the virtual environment:
-```bash
+### 4. Seed development data
+
+Open another terminal at the project root, activate the virtual environment,
+and seed service categories and a development admin account:
+
+```powershell
+.venv\Scripts\Activate.ps1
 python -m scripts.seed
 ```
 
-Development admin credentials:
-- Email: `admin@dailydrill.local`
-- Password: `ChangeMe123!`
+The seed script creates `admin@dailydrill.local` with the development password
+`ChangeMe123!`. Change or remove this account before exposing the app beyond
+trusted development testing.
 
-Change this password and remove the bootstrap account before any shared or production deployment.
+Check `http://127.0.0.1:8000/health` and browse the API at
+`http://127.0.0.1:8000/docs`.
 
-## 5. Test the workflow in Swagger
+### 5. Install and start the frontend
 
-### A. Register a customer/vendor account
-`POST /api/v1/auth/register`
-```json
-{
-  "full_name": "Test Electrician",
-  "email": "electrician@example.com",
-  "password": "TestPass123"
-}
+In a separate terminal:
+
+```powershell
+Set-Location frontend
+npm ci
+npm run dev
 ```
 
-### B. Log in
-Use `POST /api/v1/auth/login`. OAuth2 form fields:
-- username = email
-- password = password
+Open the URL Vite prints, usually `http://localhost:5173`. Vite proxies
+`/api` requests to `http://127.0.0.1:8000`, so the browser uses the same
+frontend origin for API calls.
 
-Copy `access_token`, click **Authorize**, and enter the token.
+## Testing and production build
 
-### C. List categories
-`GET /api/v1/services/categories`. Note the electrician category ID.
+```powershell
+# Frontend checks
+Set-Location frontend
+npm run lint
+npm run build
 
-### D. Create vendor profile
-`POST /api/v1/vendors/profile`
-```json
-{
-  "business_name": "Test Electrical Services",
-  "description": "Home electrical repairs",
-  "phone": "9000000001",
-  "latitude": 19.6967,
-  "longitude": 72.7699,
-  "address_label": "Test address, Maharashtra",
-  "category_ids": [1]
-}
+# From the project root, with the Python environment activated
+Set-Location ..
+python -m pytest -q
 ```
-The profile starts as `pending` and must not appear in public search.
 
-### E. Approve vendor
-Log in as the seeded admin using the admin credentials, authorize with its token,
-then call `GET /api/v1/admin/vendors/pending` and
-`POST /api/v1/admin/vendors/{vendor_id}/approve`.
+If pytest is not installed in the active environment, install it there with
+`python -m pip install pytest`.
 
-### F. Search vendors
-`GET /api/v1/vendors/search` with:
-- `category_id`: electrician category ID
-- `latitude`: 19.6967
-- `longitude`: 72.7699
-- `radius_km`: 3
+## Testing on a phone over a different network
 
-The approved vendor should appear if its saved coordinates are within 3 km.
+For temporary development testing, expose the Vite frontend through ngrok. Keep
+the API running locally; Vite forwards API requests to it.
 
-## API endpoints in this milestone
-- `POST /api/v1/auth/register`
-- `POST /api/v1/auth/login`
-- `GET /api/v1/auth/me`
-- `GET /api/v1/services/categories`
-- `POST /api/v1/vendors/profile`
-- `GET /api/v1/vendors/me`
-- `GET /api/v1/vendors/search`
-- `GET /api/v1/admin/vendors/pending`
-- `POST /api/v1/admin/vendors/{id}/approve`
-- `POST /api/v1/admin/vendors/{id}/reject`
+1. Start the API and frontend as described above.
+2. In another terminal, run:
 
-## Important MVP limitations
-- Vendor registration is a simple profile workflow, not identity verification.
-- The seeded admin is development-only.
-- Search checks approved/active/accepting vendors and category + radius only.
-- Availability calendar, service-area polygons, ratings, pricing, booking and OTP are later milestones.
-- Search radius is supplied by the caller in this phase. The automatic expansion policy is added in Phase 2.
-- `create_all` is for local bootstrap. Introduce Alembic migrations before team/shared deployments.
-- Add rate limiting, email/phone verification, password reset, audit logging, stronger validation,
-  secrets management and production security before public launch.
+   ```powershell
+   ngrok http 5173
+   ```
 
-## Next milestone
-Build a web interface (customer search + vendor onboarding + admin approval) against these APIs,
-then add the AI agent and bounded radius-expansion orchestration.
+3. Open the HTTPS forwarding URL printed by ngrok on the phone.
+4. If Vite rejects the ngrok hostname, add that exact hostname to
+   `server.allowedHosts` in `frontend/vite.config.js`, then restart Vite.
+
+This development server is not a production deployment. Anyone with the tunnel
+URL may be able to reach it; use test accounts and non-production data only.
+
+## Main folders
+
+```text
+app/
+  api/routes/       Authentication, catalog, vendors, bookings, availability,
+                    reviews, service requests, and admin endpoints
+  core/             Application settings
+  models/           SQLAlchemy database models
+  routes/ai.py      AI intent extraction and Palghar vendor search
+  schemas/          Pydantic API schemas
+frontend/
+  src/context/      Login session and user state
+  src/pages/        Customer, vendor, and admin screens
+  src/api/axios.js  Shared API client
+scripts/            Database seed/bootstrap scripts
+tests/              Backend tests
+```
+
+## Notes before deployment
+
+- `Base.metadata.create_all()` is currently used for local bootstrap. Add and
+  apply database migrations (for example, Alembic) before shared deployments.
+- Rotate secrets if they were ever committed or shared. Adding a file to
+  `.gitignore` does not remove it from existing Git history.
+- Replace development database credentials, admin credentials, and secrets;
+  configure production CORS, HTTPS, logging, backups, and access controls before
+  public launch.

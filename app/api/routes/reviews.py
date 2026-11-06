@@ -9,6 +9,7 @@ from app.security import get_current_user, require_role
 from app.models.user import User
 from app.models.booking import Booking
 from app.models.review import Review
+from app.schemas.review import ReviewOut
 from app.models.vendor import Vendor
 
 from app.schemas.review import (
@@ -194,3 +195,34 @@ def get_my_reviews(
         .order_by(Review.created_at.desc())
         .all()
     )
+    
+    
+
+@router.get("/booking/{booking_id}", response_model=ReviewOut | None)
+def get_booking_review(
+    booking_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    booking = (
+        db.query(Booking)
+        .filter(
+            Booking.id == booking_id,
+            Booking.customer_id == user.id
+        )
+        .first()
+    )
+
+    if not booking:
+        raise HTTPException(
+            status_code=404,
+            detail="Booking not found"
+        )
+
+    review = (
+        db.query(Review)
+        .filter(Review.booking_id == booking_id)
+        .first()
+    )
+
+    return review

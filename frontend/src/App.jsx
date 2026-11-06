@@ -10,6 +10,9 @@ import ServiceDiscovery from "./pages/ServiceDiscovery";
 import VendorProfile from "./pages/VendorProfile";
 import BookingPage from "./pages/BookingPage";
 import VendorDashboard from "./pages/VendorDashboard";
+import VendorOnboarding from "./pages/VendorOnboarding";
+import VendorPendingApproval from "./pages/VendorPendingApproval";
+import AdminDashboard from "./pages/AdminDashboard";
 
 function HomeRedirect() {
   const { user, loading } = useAuth();
@@ -31,12 +34,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route
-            path="/"
-            element={
-              <HomeRedirect />
-            }
-          />
+          <Route path="/" element={<HomeRedirect />} />
 
           <Route path="/login" element={<Login />} />
 
@@ -80,6 +78,31 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["vendor"]}>
                 <VendorDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor-onboarding"
+            element={
+              <ProtectedRoute allowedRoles={["vendor"]}>
+                <VendorOnboarding />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/vendor-pending-approval"
+            element={
+              <ProtectedRoute allowedRoles={["vendor"]}>
+                <VendorPendingApproval />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin-dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminDashboard />
               </ProtectedRoute>
             }
           />

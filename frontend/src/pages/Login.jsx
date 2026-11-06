@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
@@ -22,7 +21,9 @@ function Login() {
     try {
       const loggedInUser = await login(email.trim(), password);
 
-      if (loggedInUser.role === "vendor") {
+      if (loggedInUser.role === "admin") {
+        navigate("/admin-dashboard");
+      } else if (loggedInUser.role === "vendor") {
         navigate("/vendor-dashboard");
       } else {
         navigate("/dashboard");
@@ -33,7 +34,7 @@ function Login() {
       setError(
         typeof detail === "string"
           ? detail
-          : "Unable to login. Please check your credentials and try again."
+          : "Unable to login. Please check your credentials and try again.",
       );
     } finally {
       setSubmitting(false);
@@ -43,7 +44,6 @@ function Login() {
   return (
     <main className="auth-page">
       <section className="auth-layout">
-
         {/* Left Branding Section */}
         <div className="auth-visual">
           <div className="auth-brand">
@@ -52,9 +52,7 @@ function Login() {
           </div>
 
           <div className="visual-content">
-            <span className="visual-tag">
-              YOUR LOCAL SERVICE PARTNER
-            </span>
+            <span className="visual-tag">YOUR LOCAL SERVICE PARTNER</span>
 
             <h1>
               Your everyday
@@ -63,9 +61,8 @@ function Login() {
             </h1>
 
             <p>
-              Find trusted local professionals for your home.
-              From repairs to everyday services, get the right
-              help when you need it.
+              Find trusted local professionals for your home. From repairs to
+              everyday services, get the right help when you need it.
             </p>
 
             <div className="visual-features">
@@ -86,15 +83,12 @@ function Login() {
             </div>
           </div>
 
-          <div className="visual-footer">
-            Making everyday services easier.
-          </div>
+          <div className="visual-footer">Making everyday services easier.</div>
         </div>
 
         {/* Right Login Section */}
         <div className="auth-form-section">
           <div className="auth-form-container">
-
             <div className="mobile-brand">
               <div className="brand-icon">D</div>
               <span>DailyDrill</span>
@@ -103,13 +97,10 @@ function Login() {
             <div className="form-heading">
               <span className="form-eyebrow">WELCOME BACK</span>
               <h2>Sign in to your account</h2>
-              <p>
-                Enter your details to access your DailyDrill account.
-              </p>
+              <p>Enter your details to access your DailyDrill account.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="auth-form">
-
               <div className="form-group">
                 <label htmlFor="email">Email address</label>
                 <input
@@ -176,10 +167,8 @@ function Login() {
             <p className="auth-terms">
               By continuing, you agree to use DailyDrill responsibly.
             </p>
-
           </div>
         </div>
-
       </section>
     </main>
   );

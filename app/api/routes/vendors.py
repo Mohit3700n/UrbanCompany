@@ -17,7 +17,7 @@ router = APIRouter(prefix="/vendors", tags=["Vendors"])
 def create_vendor_profile(
     payload: VendorCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role("customer", "vendor")),
+    user: User = Depends(require_role("vendor")),
 ):
     existing = db.query(Vendor).filter(
         Vendor.user_id == user.id
@@ -57,6 +57,8 @@ def create_vendor_profile(
             description=payload.description,
             phone=payload.phone,
             status="pending",
+            is_active=False,
+            accepting_requests=False,
         )
 
         db.add(vendor)
@@ -82,7 +84,6 @@ def create_vendor_profile(
             )
 
         # Promote customer to vendor
-        user.role = "vendor"
 
         db.commit()
         db.refresh(vendor)
@@ -106,7 +107,7 @@ def search_vendors(
     category_id: int = Query(gt=0),
     latitude: float = Query(ge=-90, le=90),
     longitude: float = Query(ge=-180, le=180),
-    radius_km: float = Query(default=3, gt=0, le=100),
+    radius_km: float = Query(default=10, gt=0, le=100),
     limit: int = Query(default=20, ge=1, le=50),
     db: Session = Depends(get_db),
 ):

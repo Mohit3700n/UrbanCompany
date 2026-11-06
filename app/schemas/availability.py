@@ -23,3 +23,10 @@ class WorkingHoursBulkInput(BaseModel):
 class UnavailableDateInput(BaseModel):
     unavailable_date: date
     reason: str | None = Field(default=None, max_length=250)
+
+
+class BatchAvailabilityInput(BaseModel):
+    vendor_ids: list[int] = Field(min_length=1, max_length=20)
+    requested_date: date
+    duration_minutes: int = Field(default=60, ge=15, le=480)
+    slot_interval_minutes: int = Field(default=30, ge=15, le=120)

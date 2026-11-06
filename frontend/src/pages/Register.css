@@ -1,220 +1,291 @@
-* {
+.register-page,
+.register-page * {
   box-sizing: border-box;
 }
 
 .register-page {
+  --register-ink: #17251f;
+  --register-muted: #78857d;
+  --register-green: #174b3a;
+  --register-lime: #d7f477;
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 0.95fr 1.05fr;
-  background: #ffffff;
-  padding: 32px;
+  grid-template-columns: 1.02fr 0.98fr;
+  padding: clamp(18px, 4vw, 56px);
+  color: var(--register-ink);
+  background:
+    radial-gradient(ellipse at 9% 8%, rgba(216, 240, 191, 0.58), transparent 34%),
+    radial-gradient(ellipse at 94% 92%, rgba(230, 235, 208, 0.62), transparent 32%),
+    #f6f7f2;
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  text-align: left;
 }
 
-/* LEFT BRAND SECTION */
+.register-brand,
+.register-form-section {
+  min-width: 0;
+  min-height: min(760px, calc(100vh - clamp(36px, 8vw, 112px)));
+}
 
 .register-brand {
-  background: #102d25;
-  color: #ffffff;
-  padding: 42px 9%;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  position: relative;
-  overflow: hidden;
+  padding: clamp(34px, 5vw, 62px);
+  border-radius: 30px 0 0 30px;
+  color: #f7faef;
+  background:
+    radial-gradient(ellipse at 75% 82%, rgba(104, 145, 75, 0.38), transparent 37%),
+    linear-gradient(145deg, #173b30 0%, #102d26 52%, #0c2621 100%);
 }
 
+.register-brand::before,
 .register-brand::after {
   content: "";
   position: absolute;
-  width: 430px;
-  height: 430px;
-  border: 1px solid rgba(190, 245, 115, 0.12);
-  border-radius: 50%;
-  right: -180px;
-  bottom: -130px;
-  box-shadow:
-    0 0 0 45px rgba(190, 245, 115, 0.025),
-    0 0 0 90px rgba(190, 245, 115, 0.02);
+  z-index: -1;
   pointer-events: none;
+  border: 1px solid rgba(225, 246, 190, 0.12);
+  border-radius: 50%;
+}
+
+.register-brand::before {
+  width: 510px;
+  height: 510px;
+  right: -210px;
+  bottom: -180px;
+  box-shadow:
+    0 0 0 44px rgba(225, 246, 190, 0.025),
+    0 0 0 90px rgba(225, 246, 190, 0.02);
+}
+
+.register-brand::after {
+  width: 320px;
+  height: 320px;
+  right: -115px;
+  bottom: -84px;
 }
 
 .register-logo,
 .register-mobile-logo {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
+  color: inherit;
   font-size: 22px;
   font-weight: 750;
-  color: #ffffff;
+  letter-spacing: -0.8px;
   text-decoration: none;
 }
 
 .register-logo-icon {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
-  background: #c5f477;
-  color: #102d25;
-  border-radius: 11px;
+  border-radius: 14px;
+  background: var(--register-lime);
+  color: #173b30;
   font-size: 23px;
-  font-weight: 800;
+  font-weight: 850;
+  box-shadow: 0 7px 20px rgba(215, 244, 119, 0.18);
 }
 
 .register-brand-content {
-  max-width: 460px;
-  margin: 50px 0;
   position: relative;
   z-index: 1;
+  max-width: 450px;
+  margin: 48px 0;
 }
 
 .register-eyebrow,
 .register-step-label {
-  color: #c5f477;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 750;
-  letter-spacing: 1.8px;
+  letter-spacing: 2.2px;
+}
+
+.register-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--register-lime);
+}
+
+.register-eyebrow::before {
+  content: "";
+  width: 18px;
+  height: 1px;
+  background: currentColor;
 }
 
 .register-brand-content h1 {
-  font-size: clamp(40px, 5vw, 64px);
-  line-height: 1.12;
-  letter-spacing: -2.5px;
-  margin: 23px 0;
-  font-weight: 750;
+  margin: 23px 0 18px;
+  color: #f7faef;
+  font-size: clamp(42px, 4.5vw, 62px);
+  font-weight: 690;
+  line-height: 1.06;
+  letter-spacing: -2.8px;
 }
 
 .register-brand-content h1 span {
-  color: #c5f477;
+  color: var(--register-lime);
 }
 
 .register-brand-content > p {
-  color: #b5c7bf;
-  font-size: 15px;
-  line-height: 1.8;
   max-width: 390px;
+  margin: 0;
+  color: rgba(235, 243, 232, 0.72);
+  font-size: 14px;
+  line-height: 1.85;
 }
 
 .register-benefits {
   display: flex;
   flex-direction: column;
-  gap: 19px;
-  margin-top: 42px;
+  gap: 15px;
+  margin-top: 33px;
 }
 
 .register-benefit {
   display: flex;
   align-items: center;
-  gap: 13px;
-  color: #e1ebe5;
-  font-size: 14px;
+  gap: 12px;
+  color: rgba(245, 249, 240, 0.9);
+  font-size: 13px;
 }
 
 .register-benefit-icon {
   width: 23px;
   height: 23px;
-  border-radius: 50%;
   display: grid;
+  flex: 0 0 23px;
   place-items: center;
-  background: rgba(197, 244, 119, 0.15);
-  color: #c5f477;
-  font-size: 13px;
-  font-weight: 800;
+  border: 1px solid rgba(215, 244, 119, 0.28);
+  border-radius: 50%;
+  background: rgba(215, 244, 119, 0.11);
+  color: var(--register-lime);
+  font-size: 12px;
 }
 
 .register-brand-footer {
-  color: #8da49a;
-  font-size: 12px;
   position: relative;
   z-index: 1;
+  color: rgba(235, 243, 232, 0.58);
+  font-size: 11px;
+  letter-spacing: 0.2px;
 }
-
-/* RIGHT FORM SECTION */
 
 .register-form-section {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 45px 30px;
-  background: #ffffff;
+  padding: clamp(32px, 5vw, 64px);
+  border: 1px solid rgba(29, 61, 44, 0.08);
+  border-left: 0;
+  border-radius: 0 30px 30px 0;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(239, 244, 225, 0.55), transparent 35%),
+    #fffefa;
+  box-shadow:
+    0 42px 100px rgba(34, 52, 39, 0.12),
+    0 8px 24px rgba(34, 52, 39, 0.05);
 }
 
 .register-form-container {
   width: 100%;
-  max-width: 430px;
+  max-width: 420px;
 }
 
 .register-mobile-logo {
   display: none;
-  color: #102d25;
   margin-bottom: 35px;
+  color: var(--register-ink);
 }
 
 .register-heading {
-  margin-bottom: 30px;
+  margin-bottom: 25px;
 }
 
 .register-step-label {
-  color: #68834c;
+  color: #63804c;
 }
 
 .register-heading h2 {
-  color: #152c24;
+  margin: 14px 0 9px;
+  color: var(--register-ink);
   font-size: 32px;
-  letter-spacing: -1px;
-  margin: 12px 0 8px;
-  font-weight: 750;
+  font-weight: 680;
+  line-height: 1.2;
+  letter-spacing: -1.3px;
 }
 
 .register-heading p {
-  color: #7c8982;
-  font-size: 14px;
-  line-height: 1.6;
   margin: 0;
+  color: var(--register-muted);
+  font-size: 13px;
+  line-height: 1.7;
 }
-
-/* FORM FIELDS */
 
 .register-form {
   display: flex;
   flex-direction: column;
-  gap: 19px;
+  gap: 15px;
 }
 
 .register-field {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 8px;
 }
 
 .register-field label {
-  font-size: 13px;
-  color: #263d33;
-  font-weight: 650;
+  color: #35453c;
+  font-size: 12px;
+  font-weight: 680;
+  letter-spacing: 0.1px;
 }
 
-.register-field input {
+.register-field input,
+.register-field select {
   width: 100%;
-  height: 49px;
-  border: 1px solid #dce5df;
-  border-radius: 9px;
+  height: 48px;
   padding: 0 15px;
-  background: #fbfcfb;
-  color: #193329;
-  font-size: 14px;
+  border: 1px solid #e3e8de;
+  border-radius: 11px;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  background-color: rgba(255, 255, 252, 0.88);
+  color: var(--register-ink);
+  font: inherit;
+  font-size: 13px;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
 }
 
 .register-field input::placeholder {
-  color: #a5b0aa;
+  color: #a4ada3;
 }
 
-.register-field input:focus {
-  border-color: #779c53;
-  box-shadow: 0 0 0 3px rgba(153, 195, 103, 0.14);
-  background: #ffffff;
+.register-field select {
+  padding-right: 38px;
+  cursor: pointer;
+}
+
+.register-field input:hover,
+.register-field select:hover {
+  border-color: #cbd6c6;
+}
+
+.register-field input:focus,
+.register-field select:focus {
+  border-color: #6b9875;
+  background-color: #fff;
+  box-shadow: 0 0 0 4px rgba(80, 132, 91, 0.11);
 }
 
 .register-password-wrapper {
@@ -222,129 +293,155 @@
 }
 
 .register-password-wrapper input {
-  padding-right: 65px;
+  padding-right: 68px;
 }
 
 .register-password-toggle {
   position: absolute;
-  right: 14px;
   top: 50%;
+  right: 15px;
   transform: translateY(-50%);
-  border: none;
-  background: transparent;
-  color: #628046;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  color: #527b5c;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
   cursor: pointer;
 }
 
 .register-password-toggle:hover {
-  color: #263d33;
+  color: #244b34;
 }
 
-/* ERROR */
+.register-password-toggle:focus-visible,
+.register-login-link a:focus-visible,
+.register-submit:focus-visible,
+.register-logo:focus-visible {
+  outline: 3px solid rgba(91, 143, 96, 0.38);
+  outline-offset: 3px;
+}
 
 .register-error {
   display: flex;
   align-items: center;
   gap: 9px;
   padding: 11px 13px;
-  background: #fff1f0;
-  color: #bd3730;
-  border: 1px solid #ffd8d5;
-  border-radius: 8px;
-  font-size: 13px;
+  border: 1px solid #f1caca;
+  border-radius: 10px;
+  background: #fff5f3;
+  color: #a8342c;
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .register-error span {
   width: 17px;
   height: 17px;
   display: grid;
+  flex: 0 0 17px;
   place-items: center;
-  border: 1px solid #bd3730;
+  border: 1px solid currentColor;
   border-radius: 50%;
   font-size: 11px;
   font-weight: 800;
 }
 
-/* SUBMIT BUTTON */
-
 .register-submit {
   width: 100%;
-  height: 51px;
-  margin-top: 5px;
-  border: none;
-  border-radius: 9px;
-  background: #b8e86b;
-  color: #173323;
-  font-size: 14px;
-  font-weight: 750;
-  cursor: pointer;
+  height: 50px;
+  margin-top: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  transition: background 0.2s, transform 0.2s;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(105deg, #1d503c, #276045);
+  box-shadow: 0 9px 18px rgba(29, 80, 60, 0.16);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 720;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
 }
 
 .register-submit:hover:not(:disabled) {
-  background: #a8dc55;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  background: linear-gradient(105deg, #245e46, #32734f);
+  box-shadow: 0 13px 24px rgba(29, 80, 60, 0.22);
+}
+
+.register-submit:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .register-submit:disabled {
-  opacity: 0.65;
+  opacity: 0.68;
   cursor: not-allowed;
 }
 
-/* LOGIN LINK */
+.register-submit span {
+  font-size: 19px;
+  line-height: 1;
+}
 
 .register-login-link {
-  margin-top: 25px;
+  margin-top: 21px;
+  color: var(--register-muted);
+  font-size: 12px;
   text-align: center;
-  color: #7c8982;
-  font-size: 13px;
 }
 
 .register-login-link a {
-  color: #426d35;
+  margin-left: 5px;
+  color: #286044;
   font-weight: 750;
   text-decoration: none;
-  margin-left: 5px;
 }
 
 .register-login-link a:hover {
   text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .register-terms {
-  margin-top: 35px;
-  text-align: center;
-  color: #a0aaa4;
-  font-size: 11px;
+  margin: 26px 0 0;
+  color: #a0aaa0;
+  font-size: 10px;
   line-height: 1.6;
+  text-align: center;
 }
-
-/* RESPONSIVE */
 
 @media (max-width: 850px) {
   .register-page {
-    grid-template-columns: 0.85fr 1.15fr;
+    grid-template-columns: 0.9fr 1.1fr;
   }
 
   .register-brand {
-    padding: 35px 8%;
+    padding: 34px 30px;
   }
 
   .register-brand-content h1 {
-    font-size: 43px;
+    font-size: 42px;
+  }
+
+  .register-form-section {
+    padding: 35px 28px;
   }
 }
 
 @media (max-width: 650px) {
   .register-page {
+    min-height: 100svh;
     display: block;
-    min-height: 100vh;
+    padding: 0;
+    background: #fffefa;
   }
 
   .register-brand {
@@ -352,9 +449,12 @@
   }
 
   .register-form-section {
-    min-height: 100vh;
+    min-height: 100svh;
     padding: 35px 24px;
-    align-items: flex-start;
+    align-items: center;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .register-form-container {
@@ -364,13 +464,30 @@
 
   .register-mobile-logo {
     display: flex;
+    margin-bottom: 30px;
+  }
+
+  .register-heading {
+    margin-bottom: 23px;
   }
 
   .register-heading h2 {
-    font-size: 28px;
+    font-size: 29px;
   }
 
   .register-form {
-    gap: 17px;
+    gap: 15px;
+  }
+
+  .register-terms {
+    margin-top: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .register-field input,
+  .register-field select,
+  .register-submit {
+    transition: none;
   }
 }

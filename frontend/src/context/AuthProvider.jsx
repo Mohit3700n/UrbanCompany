@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { AuthContext } from "./AuthContext";
@@ -11,23 +12,25 @@ export function AuthProvider({ children }) {
 
   // Restore existing login session
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
+  const token = localStorage.getItem("access_token");
 
-    if (!token) return;
+  if (!token) {
+    return;
+  }
 
-    api
-      .get("/auth/me")
-      .then((response) => {
-        setUser(response.data);
-      })
-      .catch(() => {
-        localStorage.removeItem("access_token");
-        setUser(null);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, []);
+  api
+    .get("/auth/me")
+    .then((response) => {
+      setUser(response.data);
+    })
+    .catch(() => {
+      localStorage.removeItem("access_token");
+      setUser(null);
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+}, []);
 
   // Login
   const login = async (email, password) => {

@@ -36,10 +36,8 @@ class AIRequest(BaseModel):
 
 
 class AIFindVendorsRequest(AIRequest):
-    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
-    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
-    max_radius_km: float = Field(default=20, gt=0, le=50)
-    limit: int = Field(default=20, ge=1, le=50)
+    max_radius_km: float = Field(default=100, gt=0, le=100)
+    limit: int = Field(default=100, ge=1, le=100)
 
 
 # -----------------------------
@@ -129,15 +127,14 @@ Rules:
 
 - Understand English, Hindi and Hinglish.
 - Do not invent customer information.
-- If the service category is unclear, return null.
-- If the customer does not mention a location, set location to null.
-- Never assume the customer's location from their language or account.
-- If the location is vague, ask for a more specific area, city or PIN code.
+- If the service category is unclear, return null and ask which service they need.
+- This marketplace currently serves Palghar only. Do not ask the customer for
+  their location or imply that another city can be searched.
 - Do not invent dates or times.
 - Use low, normal, high or emergency for urgency.
-- Ask a clarification question when essential information is missing.
-- Do not recommend vendors.
-- Do not invent prices.
+- Ask one concise clarification question only when the service category is
+  unclear. A missing optional detail must not block a vendor search.
+- Do not invent vendors, ratings, availability, completed jobs, or prices.
 - Return ONLY valid JSON.
 
 IMPORTANT JSON OUTPUT RULES:
@@ -147,9 +144,9 @@ IMPORTANT JSON OUTPUT RULES:
 - If the user has not described a specific problem, return null.
 - Never invent a problem description.
 - service_category must be null if the service is unclear.
-- location must be null if the user has not provided a location.
-- If required information is missing, set needs_clarification to true.
-- Never assume the user's current location.
+- location must be null unless the user explicitly names a location.
+- Set needs_clarification to true only when service_category is unclear.
+- Never assume the user's personal/current location.
 
 Expected JSON structure:
 
@@ -318,6 +315,10 @@ async def generate_intent(message: str):
 GEOCODING_CACHE = {}
 GEOCODING_LOCK = asyncio.Lock()
 LAST_GEOCODING_REQUEST = 0.0
+# Default service location: Palghar city
+DEFAULT_CITY = "Palghar"
+DEFAULT_LATITUDE = 19.69693
+DEFAULT_LONGITUDE = 72.76543
 
 
 async def geocode_location(location: str):
@@ -449,7 +450,34 @@ SKILL_SYNONYMS = {
         "troubleshooting",
         "diagnosis",
         "electrical fault"
-    ]
+    ],
+    "plumbing": [
+    "plumbing",
+    "plumbing work",
+    "plumber",
+    "pipe repair",
+    "pipe leakage",
+    "water leakage",
+    "tap repair",
+    "bathroom fitting",
+    "drainage",
+    "water pipeline"
+],
+
+"leakage": [
+    "leakage",
+    "water leak",
+    "pipe leak",
+    "water leakage",
+    "leaking pipe"
+],
+
+"tap": [
+    "tap",
+    "faucet",
+    "tap repair",
+    "tap installation"
+],
 }
 
 
@@ -561,23 +589,62 @@ def normalize(value: str) -> str:
         if character.isalnum()
     )
 
+
+def add_vendor_recommendations(
+    vendors: list[dict],
+    service_name: str
+) -> list[dict]:
+    if not vendors:
+        return vendors
+
+    closest_distance = min(vendor["distance_km"] for vendor in vendors)
+
+    for index, vendor in enumerate(vendors):
+        reasons = []
+
+        if index == 0:
+            reasons.append(f"Listed for {service_name}")
+
+        matched_terms = vendor["ranking_breakdown"]["matched_skill_terms"]
+        if matched_terms:
+            reasons.append(
+                "Relevant experience: " + ", ".join(matched_terms)
+            )
+
+        distance = vendor["distance_km"]
+        if distance == closest_distance:
+            reasons.append(f"Closest match at {distance:.1f} km from Palghar")
+        else:
+            reasons.append(f"{distance:.1f} km from Palghar")
+
+        if vendor["total_reviews"] > 0:
+            reasons.append(
+                f'{vendor["average_rating"]:.1f}/5 from '
+                f'{vendor["total_reviews"]} customer reviews'
+            )
+
+        if vendor["completed_jobs"] > 0:
+            reasons.append(
+                f'{vendor["completed_jobs"]} completed service'
+                f'{"s" if vendor["completed_jobs"] != 1 else ""}'
+            )
+
+        vendor["recommendation_reasons"] = reasons
+        vendor["is_recommended"] = index == 0
+
+    return vendors
+
+
 @router.post("/find-vendors")
 async def find_vendors(
     request: AIFindVendorsRequest,
     db: Session = Depends(get_db)
 ):
-    # 1. Validate coordinates
-    if (request.latitude is None) != (request.longitude is None):
-        raise HTTPException(
-            status_code=422,
-            detail="Both latitude and longitude must be provided together."
-        )
-
-    # 2. Interpret customer request
+    # 1. Interpret customer request
     provider, intent = await generate_intent(request.message)
 
-    # 3. Check service category
-    if not intent.service_category:
+    # 2. Validate service category
+    if not intent.service_category or intent.needs_clarification:
         return {
             "success": True,
             "status": "needs_clarification",
@@ -590,34 +657,7 @@ async def find_vendors(
             "vendors": []
         }
 
-    # 4. Check location
-    if not intent.location and request.latitude is None:
-        return {
-            "success": True,
-            "status": "needs_clarification",
-            "provider": provider,
-            "intent": intent.model_dump(),
-            "clarification_question": (
-                "Aap kis area, city ya PIN code mein service chahte hain?"
-            ),
-            "vendors": []
-        }
-
-    # 5. Handle other AI clarification requirements
-    if intent.needs_clarification:
-        return {
-            "success": True,
-            "status": "needs_clarification",
-            "provider": provider,
-            "intent": intent.model_dump(),
-            "clarification_question": (
-                intent.clarification_question
-                or "Please provide a little more information."
-            ),
-            "vendors": []
-        }
-
-    # 6. Match category with database
+    # 3. Match category with database
     categories = db.query(ServiceCategory).filter(
         ServiceCategory.is_active.is_(True)
     ).all()
@@ -647,49 +687,30 @@ async def find_vendors(
             "vendors": []
         }
 
-    # 7. Resolve customer location
-    if request.latitude is not None:
-        # Existing GPS/manual-coordinate support
-        latitude = request.latitude
-        longitude = request.longitude
+    # 4. Always use Palghar city coordinates
+    latitude = DEFAULT_LATITUDE
+    longitude = DEFAULT_LONGITUDE
 
-        location_resolution = {
-            "requested_location": intent.location,
-            "display_name": intent.location or "Provided coordinates",
-            "latitude": latitude,
-            "longitude": longitude,
-            "source": "provided_coordinates"
-        }
+    location_resolution = {
+        "requested_location": intent.location,
+        "display_name": DEFAULT_CITY,
+        "latitude": latitude,
+        "longitude": longitude,
+        "source": "default_city"
+    }
 
-    else:
-        # Prompt-based location using geocoding
-        coordinates = await geocode_location(intent.location)
+    print("\n========== AI VENDOR SEARCH DEBUG ==========")
+    print("AI Provider:", provider)
+    print("Extracted Intent:", intent.model_dump())
+    print("Matched Category:", matched_category.name)
+    print("Matched Category ID:", matched_category.id)
+    print("Search City:", DEFAULT_CITY)
+    print("Latitude:", latitude)
+    print("Longitude:", longitude)
+    print("Maximum Radius:", request.max_radius_km)
+    print("============================================")
 
-        if not coordinates:
-            return {
-                "success": True,
-                "status": "needs_clarification",
-                "provider": provider,
-                "intent": intent.model_dump(),
-                "clarification_question": (
-                    f"Could not identify '{intent.location}'. "
-                    "Please enter a more specific area, city or PIN code."
-                ),
-                "vendors": []
-            }
-
-        latitude = coordinates["latitude"]
-        longitude = coordinates["longitude"]
-
-        location_resolution = {
-            "requested_location": intent.location,
-            "display_name": coordinates["display_name"],
-            "latitude": latitude,
-            "longitude": longitude,
-            "source": "geocoding"
-        }
-
-    # 8. PostGIS vendor search
+    # 5. PostGIS vendor search
     search_sql = text("""
         SELECT
             v.id AS vendor_id,
@@ -699,6 +720,9 @@ async def find_vendors(
             v.accepting_requests,
             vs.category_id,
             vs.skill_description,
+            COALESCE(review_stats.average_rating, 0)::float AS average_rating,
+            COALESCE(review_stats.total_reviews, 0)::int AS total_reviews,
+            COALESCE(booking_stats.completed_jobs, 0)::int AS completed_jobs,
 
             ROUND(
                 (
@@ -721,6 +745,26 @@ async def find_vendors(
         JOIN vendor_services vs
             ON vs.vendor_id = v.id
 
+        LEFT JOIN (
+            SELECT
+                vendor_id,
+                AVG(rating) AS average_rating,
+                COUNT(*) AS total_reviews
+            FROM reviews
+            GROUP BY vendor_id
+        ) review_stats
+            ON review_stats.vendor_id = v.id
+
+        LEFT JOIN (
+            SELECT
+                vendor_id,
+                COUNT(*) AS completed_jobs
+            FROM bookings
+            WHERE status = 'completed'
+            GROUP BY vendor_id
+        ) booking_stats
+            ON booking_stats.vendor_id = v.id
+
         WHERE v.status = 'approved'
           AND v.is_active IS TRUE
           AND v.accepting_requests IS TRUE
@@ -742,26 +786,31 @@ async def find_vendors(
         LIMIT :candidate_limit
     """)
 
-    # 9. Fetch more candidates than requested
+    # 6. Fetch extra candidates for ranking
     candidate_limit = min(
         max(request.limit * 5, 50),
         250
     )
 
-    # 10. Progressive radius search
+    # 7. Progressive radius search
+   # Progressive radius search
+    search_radii = [3, 5, 10, 20, 30, 50, 75, 100]
+
     search_radii = [
         radius
-        for radius in [3, 5, 10, 20]
+        for radius in search_radii
         if radius <= request.max_radius_km
     ]
 
-    if not search_radii or search_radii[-1] != request.max_radius_km:
+    if not search_radii or search_radii[-1] < request.max_radius_km:
         search_radii.append(request.max_radius_km)
 
     candidates = []
     radius_used = None
 
     for radius in search_radii:
+
+        print(f"\nSearching vendors within {radius} KM")
 
         rows = db.execute(
             search_sql,
@@ -774,20 +823,24 @@ async def find_vendors(
             }
         ).mappings().all()
 
+        print("Candidates Found:", len(rows))
+
         if rows:
             candidates = rows
             radius_used = radius
             break
 
-    # 11. Rank candidates
+    # 8. Rank candidates
     ranked_vendors = rank_vendor_candidates(
         rows=candidates,
-        problem_description=intent.problem_description,
+        problem_description=intent.problem_description or "",
         radius_km=radius_used or request.max_radius_km,
         limit=request.limit
     )
 
-    # 12. Return results
+    add_vendor_recommendations(ranked_vendors, matched_category.name)
+
+    # 9. Return results
     return {
         "success": True,
 

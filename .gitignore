@@ -1,0 +1,65 @@
+# Secrets and local environment configuration
+.env*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+ngrok.yml
+
+# Python environments, bytecode, and test/tool caches
+venv/
+.venv/
+env/
+.python-version.local
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+
+# Node, Vite, and frontend build output
+node_modules/
+frontend/dist/
+dist/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local databases, exports, and logs
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.backup
+*.log
+logs/
+
+# Temporary and operating-system files
+*.tmp
+*.temp
+*.swp
+*.swo
+*.orig
+*.rej
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor-local settings
+.idea/
+.vscode/*
+!.vscode/extensions.json

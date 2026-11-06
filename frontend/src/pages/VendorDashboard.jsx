@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
@@ -15,6 +14,7 @@ function VendorDashboard() {
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(null);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [otpInputs, setOtpInputs] = useState({});
 
   const fetchBookings = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -27,16 +27,14 @@ function VendorDashboard() {
       const data = response.data;
 
       setBookings(
-        Array.isArray(data)
-          ? data
-          : data.bookings || data.requests || []
+        Array.isArray(data) ? data : data.bookings || data.requests || [],
       );
     } catch (err) {
       const detail = err.response?.data?.detail;
       setError(
         typeof detail === "string"
           ? detail
-          : "Unable to load booking requests. Please try again."
+          : "Unable to load booking requests. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -47,15 +45,14 @@ function VendorDashboard() {
   useEffect(() => {
     let active = true;
 
-    api.get("/bookings/vendor/requests")
+    api
+      .get("/bookings/vendor/requests")
       .then((response) => {
         if (!active) return;
 
         const data = response.data;
         setBookings(
-          Array.isArray(data)
-            ? data
-            : data.bookings || data.requests || []
+          Array.isArray(data) ? data : data.bookings || data.requests || [],
         );
       })
       .catch((err) => {
@@ -65,7 +62,7 @@ function VendorDashboard() {
         setError(
           typeof detail === "string"
             ? detail
-            : "Unable to load booking requests. Please try again."
+            : "Unable to load booking requests. Please try again.",
         );
       })
       .finally(() => {
@@ -89,7 +86,44 @@ function VendorDashboard() {
       setError(
         typeof detail === "string"
           ? detail
-          : `Unable to ${action} this booking. Please try again.`
+          : `Unable to ${action} this booking. Please try again.`,
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleVerifyOtp = async (bookingId, type) => {
+    const otp = otpInputs[`${bookingId}-${type}`] || "";
+
+    if (!/^\d{6}$/.test(otp)) {
+      setError("Please enter a valid 6-digit OTP.");
+      return;
+    }
+
+    const action = type === "arrival" ? "verify-arrival" : "verify-completion";
+
+    setActionLoading(`${bookingId}-${type}`);
+    setError("");
+
+    try {
+      await api.post(`/bookings/${bookingId}/${action}`, {
+        otp: otp,
+      });
+
+      setOtpInputs((previous) => ({
+        ...previous,
+        [`${bookingId}-${type}`]: "",
+      }));
+
+      await fetchBookings(true);
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+
+      setError(
+        typeof detail === "string"
+          ? detail
+          : "OTP verification failed. Please try again.",
       );
     } finally {
       setActionLoading(null);
@@ -105,20 +139,20 @@ function VendorDashboard() {
     if (activeFilter === "all") return bookings;
 
     return bookings.filter(
-      (booking) => booking.status?.toLowerCase() === activeFilter
+      (booking) => booking.status?.toLowerCase() === activeFilter,
     );
   }, [bookings, activeFilter]);
 
   const pendingCount = bookings.filter(
-    (booking) => booking.status?.toLowerCase() === "pending"
+    (booking) => booking.status?.toLowerCase() === "pending",
   ).length;
 
   const acceptedCount = bookings.filter(
-    (booking) => booking.status?.toLowerCase() === "accepted"
+    (booking) => booking.status?.toLowerCase() === "accepted",
   ).length;
 
   const completedCount = bookings.filter(
-    (booking) => booking.status?.toLowerCase() === "completed"
+    (booking) => booking.status?.toLowerCase() === "completed",
   ).length;
 
   const formatDate = (value) => {
@@ -186,7 +220,9 @@ function VendorDashboard() {
         <section className="vendor-welcome">
           <div>
             <span className="vendor-eyebrow">VENDOR WORKSPACE</span>
-            <h1>Welcome back, {user?.full_name?.split(" ")[0] || "Partner"}.</h1>
+            <h1>
+              Welcome back, {user?.full_name?.split(" ")[0] || "Partner"}.
+            </h1>
             <p>Manage your service requests and keep your bookings on track.</p>
           </div>
 
@@ -252,9 +288,7 @@ function VendorDashboard() {
             ].map((filter) => (
               <button
                 key={filter.value}
-                className={
-                  activeFilter === filter.value ? "active" : ""
-                }
+                className={activeFilter === filter.value ? "active" : ""}
                 onClick={() => setActiveFilter(filter.value)}
               >
                 {filter.label}
@@ -287,6 +321,8 @@ function VendorDashboard() {
               {filteredBookings.map((booking) => {
                 const status = booking.status?.toLowerCase();
                 const isPending = status === "pending";
+                const isAccepted = status === "accepted";
+                const isInProgress = status === "in_progress";
 
                 return (
                   <article className="vendor-booking-card" key={booking.id}>
@@ -353,6 +389,102 @@ function VendorDashboard() {
                             ? "Accepting..."
                             : "Accept booking"}
                         </button>
+                      </div>
+                    )}
+
+                    {/* Arrival OTP Verification */}
+                    {isAccepted && (
+                      <div className="vendor-otp-section">
+                        <h4>Verify Customer Arrival OTP</h4>
+
+                        <p>
+                          Ask the customer for their 6-digit arrival OTP before
+                          starting the service.
+                        </p>
+
+                        <div className="vendor-otp-form">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            placeholder="Enter 6-digit OTP"
+                            value={otpInputs[`${booking.id}-arrival`] || ""}
+                            onChange={(e) => {
+                              const value = e.target.value
+                                .replace(/\D/g, "")
+                                .slice(0, 6);
+
+                              setOtpInputs((previous) => ({
+                                ...previous,
+                                [`${booking.id}-arrival`]: value,
+                              }));
+                            }}
+                          />
+
+                          <button
+                            className="vendor-accept-btn"
+                            disabled={
+                              actionLoading !== null ||
+                              (otpInputs[`${booking.id}-arrival`] || "")
+                                .length !== 6
+                            }
+                            onClick={() =>
+                              handleVerifyOtp(booking.id, "arrival")
+                            }
+                          >
+                            {actionLoading === `${booking.id}-arrival`
+                              ? "Verifying..."
+                              : "Verify & Start Service"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Completion OTP Verification */}
+                    {isInProgress && (
+                      <div className="vendor-otp-section">
+                        <h4>Verify Service Completion OTP</h4>
+
+                        <p>
+                          Enter the completion OTP provided by the customer
+                          after finishing the service.
+                        </p>
+
+                        <div className="vendor-otp-form">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            placeholder="Enter 6-digit OTP"
+                            value={otpInputs[`${booking.id}-completion`] || ""}
+                            onChange={(e) => {
+                              const value = e.target.value
+                                .replace(/\D/g, "")
+                                .slice(0, 6);
+
+                              setOtpInputs((previous) => ({
+                                ...previous,
+                                [`${booking.id}-completion`]: value,
+                              }));
+                            }}
+                          />
+
+                          <button
+                            className="vendor-accept-btn"
+                            disabled={
+                              actionLoading !== null ||
+                              (otpInputs[`${booking.id}-completion`] || "")
+                                .length !== 6
+                            }
+                            onClick={() =>
+                              handleVerifyOtp(booking.id, "completion")
+                            }
+                          >
+                            {actionLoading === `${booking.id}-completion`
+                              ? "Verifying..."
+                              : "Verify & Complete Service"}
+                          </button>
+                        </div>
                       </div>
                     )}
                   </article>

@@ -36,10 +36,10 @@ function Register() {
         fullName.trim(),
         email.trim(),
         password,
-        role
+        role,
       );
       if (loggedInUser.role === "vendor") {
-        navigate("/vendor-dashboard");
+        navigate("/vendor-onboarding");
       } else {
         navigate("/dashboard");
       }
@@ -49,7 +49,7 @@ function Register() {
       setError(
         typeof detail === "string"
           ? detail
-          : "Registration failed. Please check your details."
+          : "Registration failed. Please check your details.",
       );
     } finally {
       setSubmitting(false);
@@ -75,8 +75,8 @@ function Register() {
           </h1>
 
           <p>
-            Create your account and connect with trusted local professionals
-            for everyday services.
+            Create your account and connect with trusted local professionals for
+            everyday services.
           </p>
 
           <div className="register-benefits">
@@ -198,9 +198,7 @@ function Register() {
                 <button
                   type="button"
                   className="register-password-toggle"
-                  onClick={() =>
-                    setShowConfirmPassword(!showConfirmPassword)
-                  }
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? "Hide" : "Show"}
                 </button>

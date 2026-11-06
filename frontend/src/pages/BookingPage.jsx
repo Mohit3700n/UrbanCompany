@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "../api/axios";
 import "./BookingPage.css";
 
@@ -15,13 +15,35 @@ function createIndiaDateTime(date, time) {
   return `${date}T${time}:00${INDIA_OFFSET}`;
 }
 
+function getValidRequestedDate(value) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return "";
+
+  const [year, month, day] = value.split("-").map(Number);
+  const parsedDate = new Date(Date.UTC(year, month - 1, day));
+  const isValidDate =
+    parsedDate.getUTCFullYear() === year &&
+    parsedDate.getUTCMonth() === month - 1 &&
+    parsedDate.getUTCDate() === day;
+
+  return isValidDate && value >= getIndiaDate() ? value : "";
+}
+
 export default function BookingPage() {
   const { vendorId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [selectedDate, setSelectedDate] = useState(getIndiaDate());
+  const [selectedDate, setSelectedDate] = useState(
+    () => getValidRequestedDate(searchParams.get("date")) || getIndiaDate(),
+  );
   const [selectedSlot, setSelectedSlot] = useState(null);
-  const [problemDescription, setProblemDescription] = useState("");
+  const requestedSlot = useRef({
+    start: searchParams.get("start") || "",
+    end: searchParams.get("end") || "",
+  });
+  const [problemDescription, setProblemDescription] = useState(
+    () => searchParams.get("problem") || "",
+  );
 
   const [slots, setSlots] = useState([]);
   const [vendorName, setVendorName] = useState("Selected Vendor");
@@ -56,6 +78,16 @@ export default function BookingPage() {
         const result = response.data;
 
         setSlots(result.slots || []);
+        const matchingRequestedSlot = (result.slots || []).find(
+          (slot) =>
+            slot.start_time === requestedSlot.current.start &&
+            (!requestedSlot.current.end ||
+              slot.end_time === requestedSlot.current.end),
+        );
+        if (matchingRequestedSlot) {
+          setSelectedSlot(matchingRequestedSlot);
+        }
+        requestedSlot.current = { start: "", end: "" };
 
         if (result.business_name) {
           setVendorName(result.business_name);
@@ -206,7 +238,10 @@ export default function BookingPage() {
                 type="date"
                 value={selectedDate}
                 min={getIndiaDate()}
-                onChange={(e) => setSelectedDate(e.target.value)}
+                onChange={(e) => {
+                  requestedSlot.current = { start: "", end: "" };
+                  setSelectedDate(e.target.value);
+                }}
               />
             </section>
 

@@ -33,7 +33,11 @@ router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
 INDIA_TZ = ZoneInfo("Asia/Kolkata")
 
-ACTIVE_BOOKING_STATUSES = ["pending", "accepted"]
+ACTIVE_BOOKING_STATUSES = [
+    "pending",
+    "accepted",
+    "in_progress",
+]
 
 ALLOWED_BOOKING_STATUSES = {
     "pending",
@@ -52,9 +56,11 @@ CANCELLATION_CUTOFF_HOURS = 2
 # --------------------------------------------------
 
 def get_vendor_for_user(db: Session, user: User):
-    vendor = db.query(Vendor).filter(
-        Vendor.user_id == user.id
-    ).first()
+    vendor = (
+        db.query(Vendor)
+        .filter(Vendor.user_id == user.id)
+        .first()
+    )
 
     if not vendor:
         raise HTTPException(
@@ -65,14 +71,35 @@ def get_vendor_for_user(db: Session, user: User):
     return vendor
 
 
+def require_approved_vendor(db: Session, user: User):
+    vendor = get_vendor_for_user(db, user)
+
+    if vendor.status != "approved":
+        raise HTTPException(
+            status_code=403,
+            detail="Your vendor account is not approved yet"
+        )
+
+    if not vendor.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Your vendor account is inactive"
+        )
+
+    return vendor
+
+
 def get_booking_for_customer(
     db: Session,
     booking_id: int,
     user: User
 ):
-    booking = db.query(Booking).filter(
-        Booking.id == booking_id
-    ).with_for_update().first()
+    booking = (
+        db.query(Booking)
+        .filter(Booking.id == booking_id)
+        .with_for_update()
+        .first()
+    )
 
     if not booking:
         raise HTTPException(
@@ -91,14 +118,20 @@ def get_booking_for_customer(
 
 def get_booking_for_vendor(
     db: Session,
-    booking_id: int,
-    user: User
+    user: User,
+    booking_id: int
 ):
-    vendor = get_vendor_for_user(db, user)
+    vendor = require_approved_vendor(db, user)
 
-    booking = db.query(Booking).filter(
-        Booking.id == booking_id
-    ).with_for_update().first()
+    booking = (
+        db.query(Booking)
+        .filter(
+            Booking.id == booking_id,
+            Booking.vendor_id == vendor.id
+        )
+        .with_for_update()
+        .first()
+    )
 
     if not booking:
         raise HTTPException(
@@ -106,14 +139,7 @@ def get_booking_for_vendor(
             detail="Booking not found"
         )
 
-    if booking.vendor_id != vendor.id:
-        raise HTTPException(
-            status_code=403,
-            detail="This booking does not belong to your business"
-        )
-
     return booking
-
 
 # --------------------------------------------------
 # 1. CUSTOMER BOOKING HISTORY
@@ -376,7 +402,7 @@ def accept_booking(
 ):
     try:
         booking = get_booking_for_vendor(
-            db, booking_id, user
+            db, user, booking_id
         )
 
         if booking.status != "pending":
@@ -418,7 +444,7 @@ def reject_booking(
 ):
     try:
         booking = get_booking_for_vendor(
-            db, booking_id, user
+            db, user, booking_id
         )
 
         if booking.status != "pending":
@@ -574,7 +600,7 @@ def verify_arrival_otp(
     user: User = Depends(require_role("vendor"))
 ):
     try:
-        booking = get_booking_for_vendor(db, booking_id, user)
+        booking = get_booking_for_vendor(db, user, booking_id)
 
         if booking.status != "accepted":
             raise HTTPException(
@@ -657,7 +683,7 @@ def verify_completion_otp(
     user: User = Depends(require_role("vendor"))
 ):
     try:
-        booking = get_booking_for_vendor(db, booking_id, user)
+        booking = get_booking_for_vendor(db, user, booking_id)
 
         if booking.status != "in_progress":
             raise HTTPException(
