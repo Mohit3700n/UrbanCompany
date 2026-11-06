@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: dailydrill-db
+    environment:
+      POSTGRES_DB: dailydrill
+      POSTGRES_USER: daily
+      POSTGRES_PASSWORD: daily_dev_only
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U daily -d dailydrill"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
